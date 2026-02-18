@@ -129,7 +129,7 @@ async def get_articles(
             session, articles.unique().all()
         )
 
-        return paginated_response(articles.unique().all(), total, page, limit)
+        return paginated_response(articles, total, page, limit)
 
     meilisearch_result = await meilisearch.search(
             constants.SEARCH_INDEX_ARTICLES,
