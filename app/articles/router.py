@@ -7,8 +7,8 @@ from app import constants
 from . import service
 
 from app.utils import (
-    pagination_dict,
     pagination,
+    paginated_response,
 )
 
 from app.models import (
@@ -117,26 +117,27 @@ async def get_articles(
         )
     ),
 ):
-    if args.query:
-        return await meilisearch.search(
+    if not args.query:
+        limit, offset = pagination(page, size)
+        total = await service.get_articles_count(session, request_user, args)
+
+        articles = await service.get_articles(
+            session, request_user, args, limit, offset
+        )
+
+        articles = await service.load_articles_content(
+            session, articles.unique().all()
+        )
+
+        return paginated_response(articles.unique().all(), total, page, limit)
+
+    meilisearch_result = await meilisearch.search(
             constants.SEARCH_INDEX_ARTICLES,
             sort=['title:desc'],
             query=args.query,
             page=page,
             size=size,
         )
-    limit, offset = pagination(page, size)
-    total = await service.get_articles_count(session, request_user, args)
 
-    articles = await service.get_articles(
-        session, request_user, args, limit, offset
-    )
+    return service.article_meilisearch_search(session, meilisearch_result)
 
-    articles = await service.load_articles_content(
-        session, articles.unique().all()
-    )
-
-    return {
-        "pagination": pagination_dict(total, page, limit),
-        "list": articles,
-    }

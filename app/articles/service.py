@@ -558,3 +558,19 @@ async def get_article_authors(session: AsyncSession, request_user: User):
         )
         .order_by(UserArticleStats.author_score.desc())
     )
+
+async def article_meilisearch_search(
+    session: AsyncSession,
+    meilisearch_result: dict,
+):
+    slugs = [article["slug"] for article in meilisearch_result]
+    query = select(Article).filter(Article.slug.in_(slugs))
+
+    article_list = await session.scalars(query)
+    meilisearch_result["list"] = article_list.unique().all()
+
+    meilisearch_result["list"] = sorted(
+        meilisearch_result["list"], key=lambda x: slugs.index(x.slug)
+    )
+
+    return meilisearch_result
